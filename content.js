@@ -37,6 +37,7 @@
   function getDataFromHtml() {
     const elements = document.querySelectorAll('[data-testid^="search-result-entry-price-"]');
     return Array.from(elements).map(el => {
+      // convert german decimal
       const price = el.textContent === 'zu verschenken' ? 0 : parseFloat(el.textContent.replace('€', '').replace('.', '').replace(',', '.').trim());
       return { id: el.dataset.testid.replace('search-result-entry-price-', ''), price };
     });
