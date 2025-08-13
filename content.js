@@ -53,9 +53,9 @@
     box = document.createElement('div');
     box.id = 'wh-price-stats';
     box.style.cssText = `
-      display:flex; gap:12px; flex-wrap:wrap; align-items:center;
+      display:flex; gap:12px; flex-wrap:wrap; align-items:center;color:var(--wh-color-typo-main-foreground);
       padding:12px 14px; margin:12px 0;
-      border:1px solid #e5e7eb; border-radius:8px; background:#fafafa;
+      border:1px solid var(--wh-color-basic-outline); border-radius:8px; background:var(--wh-color-basic-background);
       font: 14px/1.4 system-ui, -apple-system, Segoe UI, Roboto, Arial;
     `;
     if (anchor?.parentNode) anchor.parentNode.insertBefore(box, anchor);
