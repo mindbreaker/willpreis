@@ -17,25 +17,41 @@
   // ---------- 2) Helpers -----------------------------------------------------
   const nf = new Intl.NumberFormat('de-AT', { style: 'currency', currency: 'EUR' });
 
-  function getNextData() {
+  function getDataFromNextJson() {
     const el = document.getElementById('__NEXT_DATA__');
-    if (!el) return null;
-    try { return JSON.parse(el.textContent || '{}'); } catch { return null; }
+    if (!el) return [];
+    try {
+      return JSON.parse(el.textContent || '{}').props.pageProps.searchResult.advertSummaryList.advertSummary.map(ad => {
+        const priceAmount = ad.attributes?.attribute?.find(a => a.name === 'PRICE/AMOUNT')?.values?.[0] || 0;
+        return {
+          id: ad.id,
+          price: priceAmount != null ? parseFloat(priceAmount) : 0
+        };
+      });
+    } catch {
+      return [];
+    }
   }
 
-  // nur PRICE/AMOUNT lesen
-  function extractPrices(nd) {
-    const ads = nd?.props?.pageProps?.searchResult?.advertSummaryList?.advertSummary;
-    if (!Array.isArray(ads)) return [];
-    const out = [];
-    for (const ad of ads) {
-      const attrs = ad?.attributes?.attribute;
-      if (!Array.isArray(attrs)) continue;
-      const priceAmount = attrs.find(a => a?.name === 'PRICE/AMOUNT')?.values?.[0];
-      const n = priceAmount != null ? parseFloat(String(priceAmount)) : null;
-      if (Number.isFinite(n) && n > 0) out.push(n);
-    }
-    return out;
+  // get id and price from HTML
+  function getDataFromHtml() {
+    const elements = document.querySelectorAll('[data-testid^="search-result-entry-price-"]');
+    return Array.from(elements).map(el => {
+      const price = el.textContent === 'zu verschenken' ? 0 : parseFloat(el.textContent.replace('€', '').replace('.', '').replace(',', '.').trim());
+      return { id: el.dataset.testid.replace('search-result-entry-price-', ''), price };
+    });
+  }
+
+  // remove duplicates and get just price
+  function extractPrices(ads) {
+    const seen = new Set();
+    return ads.reduce((acc, ad) => {
+      if ((ad.price || ad.price === 0) && !seen.has(ad.id)) {
+        seen.add(ad.id);
+        acc.push(ad.price);
+      }
+      return acc;
+    }, []);
   }
 
   function calcStats(nums) {
@@ -78,18 +94,26 @@
     `;
   }
 
-  function run() {
-    const nd = getNextData();
-    const prices = extractPrices(nd);
+  function run(useNextJson) {
+    // const data = getDataFromNextJson().concat(getDataFromHtml());
+    const data = useNextJson ? getDataFromNextJson() : getDataFromHtml();
+    const prices = extractPrices(data);
     render(calcStats(prices));
   }
 
   // ---------- 3) initial & bei SPA-Updates neu rechnen -----------------------
-  run();
+  run(true);
 
   const nextEl = document.getElementById('__NEXT_DATA__');
   if (nextEl) {
-    const obs = new MutationObserver(() => run());
+    const obs = new MutationObserver(() => run(true));
     obs.observe(nextEl, { characterData: true, childList: true, subtree: true });
+  }
+
+  // ---------- 4) Observe title, because it updates when searching new or filtering
+  const titleEl = document.getElementById('result-list-title');
+  if (titleEl) {
+    const obs = new MutationObserver(() => run());
+    obs.observe(titleEl, { attributes: true });
   }
 })();
